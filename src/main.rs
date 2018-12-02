@@ -1,4 +1,5 @@
 mod day01;
+mod day02;
 mod utils;
 
 use clap::{App, Arg};
@@ -16,6 +17,7 @@ fn main() {
         let d: i32 = d.parse().expect("Must be a number");
         match d {
             1 => day01::run(),
+            2 => day02::run(),
             _ => {
                 println!("Day not found");
                 exit(1);

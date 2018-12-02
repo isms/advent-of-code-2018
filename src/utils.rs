@@ -8,3 +8,11 @@ pub fn read_input(filename: &str) -> String {
         .expect("Problem reading the file");
     contents
 }
+
+pub fn str_to_trimmed_lines_vec(contents: &str) -> Vec<String> {
+    contents
+        .lines()
+        .map(|l| l.trim().to_string())
+        .filter(|l| l.len() > 0)
+        .collect()
+}
