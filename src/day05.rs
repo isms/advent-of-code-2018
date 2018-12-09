@@ -12,11 +12,9 @@ fn remove_polar_pairs(text: &str) -> String {
     while i < (text.len() - 1) {
         let pair = (chars[i], chars[i + 1]);
         if is_polar_pair(&pair) {
-            println!("skipping pair: {:?}", pair);
             i += 2;
         } else {
             result.push(chars[i]);
-            println!("pair is fine: {:?}", pair);
             i += 1;
         }
     }
@@ -29,18 +27,10 @@ fn remove_all_polar_pairs(text: &str) -> String {
     let mut curr = remove_polar_pairs(text);
     let mut i = 1;
     while curr.len() < old_len {
-        println!(
-            "[{:}] ({:}) old len={:} new len={:}",
-            i,
-            curr,
-            old_len,
-            curr.len()
-        );
         old_len = curr.len();
         curr = remove_polar_pairs(&curr);
         i += 1
     }
-    println!("-- ({:}) finished in {:} passes", curr, i);
     curr
 }
 
@@ -68,6 +58,5 @@ mod tests {
             remove_all_polar_pairs("dabAcCaCBAcCcaDA"),
             "dabCBAcaDA".to_string()
         );
-        run();
     }
 }
