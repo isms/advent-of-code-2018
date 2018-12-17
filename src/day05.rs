@@ -25,11 +25,9 @@ fn remove_polar_pairs(text: &str) -> String {
 fn remove_all_polar_pairs(text: &str) -> String {
     let mut old_len = text.len();
     let mut curr = remove_polar_pairs(text);
-    let mut i = 1;
     while curr.len() < old_len {
         old_len = curr.len();
         curr = remove_polar_pairs(&curr);
-        i += 1
     }
     curr
 }
