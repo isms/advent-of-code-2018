@@ -1,5 +1,4 @@
 use crate::utils;
-use std::collections::HashMap;
 
 #[derive(Debug, Copy, Clone)]
 pub enum Opcode {
@@ -193,7 +192,9 @@ pub struct Instruction {
     c: usize,
 }
 
-pub fn parse_fixtures(text: &str) -> Vec<(CPU, Vec<usize>, CPU)> {
+type Fixture = (CPU, Vec<usize>, CPU);
+
+pub fn parse_fixtures(text: &str) -> Vec<Fixture> {
     let mut fixtures = vec![];
     for case in text.split("\n\n") {
         let lines: Vec<&str> = case.split("\n").collect();
@@ -224,9 +225,10 @@ pub fn parse_program(text: &str) -> Vec<Vec<usize>> {
     groups4
 }
 
-pub fn part1(fixtures: Vec<(CPU, Vec<usize>, CPU)>) -> usize {
-    let mut possibilities: HashMap<usize, Vec<Opcode>> = HashMap::new();
-    let all_opcodes = vec![
+pub fn n_opcodes_work(fixture: Fixture) -> usize {
+    let (before, instr, after) = fixture;
+    let (_i, a, b, c) = (instr[0], instr[1], instr[2], instr[3]);
+    let possibilities = vec![
         Opcode::Addr,
         Opcode::Addi,
         Opcode::Mulr,
@@ -244,29 +246,20 @@ pub fn part1(fixtures: Vec<(CPU, Vec<usize>, CPU)>) -> usize {
         Opcode::Eqri,
         Opcode::Eqrr,
     ];
-    for (before, instr, after) in fixtures {
-        let (i, a, b, c) = (instr[0], instr[1], instr[2], instr[3]);
-        let mut narrowed: Vec<Opcode> = vec![];
-        let curr = possibilities
-            .entry(i)
-            .or_insert(all_opcodes.clone())
-            .to_vec();
-        for opcode in curr.into_iter() {
-            let instruction = Instruction { opcode, a, b, c };
-            if before.execute(instruction) == after {
-                narrowed.push(opcode);
-            }
-        }
-        possibilities.insert(i, narrowed);
-    }
     possibilities
-        .values()
         .into_iter()
-        .map(|c| {
-            println!("{:?}", c);
-            c.len()
+        .filter(|&opcode| {
+            let instruction = Instruction { opcode, a, b, c };
+            before.execute(instruction) == after
         })
-        .filter(|l| *l >= 3)
+        .count()
+}
+
+pub fn part1(fixtures: Vec<(CPU, Vec<usize>, CPU)>) -> usize {
+    fixtures
+        .into_iter()
+        .map(n_opcodes_work)
+        .filter(|n| *n >= 3)
         .count()
 }
 
@@ -289,7 +282,9 @@ mod tests {
     fn test_part1() {
         let fixtures = parse_fixtures("Before: [3, 2, 1, 1]\n9 2 1 2\nAfter:  [3, 2, 2, 1]");
         assert_eq!(fixtures.len(), 1);
-        part1(fixtures);
+        assert_eq!(fixtures[0].0.r[0], 3);
+        assert_eq!(fixtures[0].1[0], 9);
+        assert_eq!(fixtures[0].2.r[0], 3);
     }
 
     #[test]

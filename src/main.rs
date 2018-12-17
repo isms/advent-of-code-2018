@@ -1,6 +1,7 @@
 mod day01;
 mod day02;
 mod day05;
+mod day16;
 mod utils;
 
 use clap::{App, Arg};
@@ -20,6 +21,7 @@ fn main() {
             1 => day01::run(),
             2 => day02::run(),
             5 => day05::run(),
+            16 => day16::run(),
             _ => {
                 println!("Day not found");
                 exit(1);
