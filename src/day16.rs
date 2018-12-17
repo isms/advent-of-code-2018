@@ -1,6 +1,8 @@
 use crate::utils;
+use std::collections::HashMap;
+use std::collections::HashSet;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum Opcode {
     Addr,
     Addi,
@@ -225,10 +227,20 @@ pub fn parse_program(text: &str) -> Vec<Vec<usize>> {
     groups4
 }
 
-pub fn n_opcodes_work(fixture: Fixture) -> usize {
+pub fn which_opcodes_work(fixture: Fixture, possibilities: Vec<Opcode>) -> Vec<Opcode> {
     let (before, instr, after) = fixture;
     let (_i, a, b, c) = (instr[0], instr[1], instr[2], instr[3]);
-    let possibilities = vec![
+    possibilities
+        .into_iter()
+        .filter(|&opcode| {
+            let instruction = Instruction { opcode, a, b, c };
+            before.execute(instruction) == after
+        })
+        .collect()
+}
+
+pub fn narrow_opcodes_to_known(fixtures: Vec<Fixture>) -> HashMap<usize, Opcode> {
+    let all_opcodes = vec![
         Opcode::Addr,
         Opcode::Addi,
         Opcode::Mulr,
@@ -246,21 +258,78 @@ pub fn n_opcodes_work(fixture: Fixture) -> usize {
         Opcode::Eqri,
         Opcode::Eqrr,
     ];
-    possibilities
-        .into_iter()
-        .filter(|&opcode| {
-            let instruction = Instruction { opcode, a, b, c };
-            before.execute(instruction) == after
-        })
-        .count()
+    let mut mapping: HashMap<usize, Vec<Opcode>> = HashMap::new();
+    for fixture in fixtures.clone() {
+        let i = fixture.1[0];
+        let curr = mapping.entry(i).or_insert(all_opcodes.clone());
+        let next = which_opcodes_work(fixture.clone(), curr.to_vec());
+        mapping.insert(i, next);
+    }
+    println!("mapping: {:?}", mapping);
+
+    let mut known: HashMap<usize, Opcode> = HashMap::new();
+    loop {
+        for (k, v) in mapping.clone().drain() {
+            if v.len() == 1 {
+                known.insert(k, v[0]);
+                println!("eliminating {:?}={:}", v[0], k);
+                for j in 0usize..16 {
+                    let others = mapping.get(&j).unwrap().to_owned();
+                    let winnowed = others.into_iter().filter(|&op| op != v[0]).collect();
+                    mapping.insert(j, winnowed);
+                }
+            }
+        }
+        println!("known: {:?}", known);
+        if known.len() == 16 {
+            break;
+        }
+    }
+    known
 }
 
-pub fn part1(fixtures: Vec<(CPU, Vec<usize>, CPU)>) -> usize {
-    fixtures
+pub fn part1(fixtures: Vec<Fixture>) {
+    let all_opcodes = vec![
+        Opcode::Addr,
+        Opcode::Addi,
+        Opcode::Mulr,
+        Opcode::Muli,
+        Opcode::Banr,
+        Opcode::Bani,
+        Opcode::Borr,
+        Opcode::Bori,
+        Opcode::Setr,
+        Opcode::Seti,
+        Opcode::Gtir,
+        Opcode::Gtri,
+        Opcode::Gtrr,
+        Opcode::Eqir,
+        Opcode::Eqri,
+        Opcode::Eqrr,
+    ];
+    let counts = fixtures
         .into_iter()
-        .map(n_opcodes_work)
+        .map(|f| which_opcodes_work(f, all_opcodes.clone()).len())
         .filter(|n| *n >= 3)
-        .count()
+        .count();
+    println!("part 1: {:?}", counts);
+}
+
+pub fn part2(fixtures: Vec<Fixture>, program: Vec<Vec<usize>>) {
+    let known = narrow_opcodes_to_known(fixtures.clone());
+    let mut cpu = CPU::from_vec(&vec![0, 0, 0, 0]);
+    println!("{:}: {:?}", 0, cpu);
+
+    let mut i = 0;
+    for line in program {
+        i += 1;
+        println!("{:?}", line);
+        let (&opcode, a, b, c) = (known.get(&line[0]).unwrap(), line[1], line[2], line[3]);
+        let instruction = Instruction { opcode, a, b, c };
+        println!("{:}: {:?}", i, instruction);
+        cpu = cpu.execute(instruction);
+        println!("{:}: {:?}", i, cpu)
+    }
 }
 
 pub fn run() {
@@ -268,10 +337,14 @@ pub fn run() {
     let contents: String = utils::read_input(&filename);
 
     let split: Vec<&str> = contents.split("\n\n\n").collect();
-    let fixtures = parse_fixtures(split[0]);
-    let _program = parse_program(split[1]);
 
-    println!("part 1: {:?}", part1(fixtures));
+    // part 1
+    let fixtures = parse_fixtures(split[0]);
+    part1(fixtures.clone());
+
+    // part 2
+    let program = parse_program(split[1]);
+    part2(fixtures, program);
 }
 
 #[cfg(test)]
